@@ -1,4 +1,4 @@
-esponseJSON = [
+var ResponseJSON = [
   {
     "category": "L\u00e4genhet", 
     "street": "Rind\u00f6gatan 30, 115 58 Stockholm, Sverige", 
