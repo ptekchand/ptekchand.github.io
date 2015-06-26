@@ -5,10 +5,10 @@ jQuery(document).ready(function() {
 	var aCentralLat = 59.312768;
 	var aCentralLon = 18.0735245;
 	
-	function getFutureDateByMonths(monthsAhead = 5) {
+	function getFutureDateByMonths(monthsAhead) {
 		var minimumEndDate = new Date();
 		var futureMonth = minimumEndDate.getMonth() + monthsAhead;
-		var futureYear = minimumEndDate.getYear();
+		var futureYear = minimumEndDate.getYear() + 1900;
 		while(futureMonth > 11) {
 			futureMonth -= 11;
 			futureYear += 1;
@@ -17,7 +17,7 @@ jQuery(document).ready(function() {
 		return minimumEndDate;
 	}
 	
-	function getPastDateByDays(daysInPast = 60) {
+	function getPastDateByDays(daysInPast) {
 		var daysToMsecFactor = 24*60*60*1000;
 		return new Date(new Date() - daysInPast*daysToMsecFactor);
 	}
@@ -67,7 +67,13 @@ jQuery(document).ready(function() {
 			}
 		}
 		else {
-			//console.log("DEBUG: Unknown duration: '"+durationText+"'");
+			var showUnknownDuration = true;
+			if(durationParts.length==2 && durationParts[1].trim()=="Tills vidare.") {
+				showUnknownDuration = false;
+			}
+			if(showUnknownDuration) {
+				console.log("DEBUG: Unknown duration: '"+durationText+"'");
+			}
 		}
 		//--------------------------------------------------------------
 		// filter by age of data.
@@ -84,10 +90,32 @@ jQuery(document).ready(function() {
 	}
 
 	//// Test filterMarkerData
-	//var markers = ResponseJSON;
-	//for (var i = 0; i < markers.length; i++) {
-	//	console.log("DEBUG: filter("+markers[i]["duration"]+"): '"+filterMarkerData(markers[i])+"'");
+	//var markerDataList = ResponseJSON;
+	//for (var i = 0; i < markerDataList.length; i++) {
+	//	console.log("DEBUG: filter("+markerDataList[i]["duration"]+"): '"+filterMarkerData(markerDataList[i])+"'");
 	//}
+	$('html').css('height', '100%');
+	var the_body = $('body');
+	the_body.css('min-height', '100%');
+	$('#map_canvas').width(the_body.width());
+	$('#map_canvas').height(the_body.height()-35);
+
+	
+	var monthsAhead = parseInt($('#i_monthsAhead').val());
+	var daysInPast  = parseInt($('#i_daysInPast').val());
+	var mapMarkerList = [];
+	
+	$('#filterBtn').bind("click", function() {
+		monthsAhead = parseInt($('#i_monthsAhead').val());
+		daysInPast  = parseInt($('#i_daysInPast').val());
+		// Clear Markers
+		for (var i = 0; i < mapMarkerList.length; i++) {
+			mapMarkerList[i].setMap(null);
+		}		
+		mapMarkerList = [];
+		// Re-draw
+		setAndDrawMarkers();
+	});
 	
 	// Remember to get the element id right otherwise, you might run into a "Uncaught TypeError: Cannot read property 'offsetWidth' of null" in the map api's main.js
 	var map = new google.maps.Map(document.getElementById("map_canvas"), {
@@ -97,55 +125,62 @@ jQuery(document).ready(function() {
 	});
 	var clickedInfo = false;
 	var infoWindow = new google.maps.InfoWindow;
-	var monthsAhead = 5;
-	var daysInPast = 60;
-	var minimumEndDate = getFutureDateByMonths(monthsAhead);
-	var oldestPostDate = getPastDateByDays(daysInPast);
-	var markers = ResponseJSON;
-	var svTodayRe = /Idag \(\d+:\d+\)/;
-	for (var i = 0; i < markers.length; i++) {
-		if(!filterMarkerData(markers[i], minimumEndDate, oldestPostDate)) {
-			continue;
-		}
-		var duration_str = markers[i]["duration"];
-		duration_str = duration_str.replace( svTodayRe, markers[i]["datetime"] );
-		//duration_str = duration_str.replace("Omg\u00e5ende -", markers[i]["datetime"]+" -");
-		
-		var name = markers[i]["item_id"];
-		var address = markers[i]["street"];
-		var type = markers[i]["category"];
-		var id = markers[i]["item_id"];
-		var gps_comps = markers[i]["gps"].split(",");
-		var point = new google.maps.LatLng(
-				parseFloat( gps_comps[0] ),
-				parseFloat( gps_comps[1] )
-			);
-		var baseUrl = 'hand.se';
-		baseUrl = 'http://www.andra' + baseUrl;
-		var html = '<div class="map_tooltip"><b>' + type + '</b> ' + name + '<br/>';
-		var showImages = false;
-		if(markers[i]["image"] && showImages) {
-			html += '<img class="preview_pic" src="'+baseUrl+markers[i]["image"]+'" /><br/>';
-		}
-		html += '<span class="address">' +address + '</span><br/>' + ' <br/> Rent: <strong>'+markers[i]["rent"] + '</strong> Size: '+markers[i]["size"] + ' / ' + markers[i]["rooms"] + ' <br/> Posted: ' + markers[i]["datetime"] + '<br/> Duration: ' + duration_str + '<br/>';
-		var contact = markers[i]["contact"];
-		if(contact != "") {
-			html += 'Contact: '+contact+'<br/>';
-		}
-		html += '<a href="' + baseUrl + markers[i]["url"] + '" target="_new" >More Info</a>' ;
-		html += '<span class="adicon adtype_'+categoryImageMap[type]+'"></span>';
-		html += '</div>';
-		
-		//var icon = customIcons[type] || {};
-		var marker = new google.maps.Marker({
-				map : map,
-				position : point//,
-				//icon : icon.icon,
-				//shadow : icon.shadow,
-				//animation : google.maps.Animation.BOUNCE
-			});
+	
+	setAndDrawMarkers();
+	
+	function setAndDrawMarkers() {
+		var minimumEndDate = getFutureDateByMonths(monthsAhead);
+		var oldestPostDate = getPastDateByDays(daysInPast);
+		console.log("DEBUG: minimumEndDate: '"+minimumEndDate+"'");
+		console.log("DEBUG: oldestPostDate: '"+oldestPostDate+"'");
+		var markerDataList = ResponseJSON;
+		var svTodayRe = /Idag \(\d+:\d+\)/;
+		for (var i = 0; i < markerDataList.length; i++) {
+			if(!filterMarkerData(markerDataList[i], minimumEndDate, oldestPostDate)) {
+				continue;
+			}
+			var duration_str = markerDataList[i]["duration"];
+			duration_str = duration_str.replace( svTodayRe, markerDataList[i]["datetime"] );
+			//duration_str = duration_str.replace("Omg\u00e5ende -", markerDataList[i]["datetime"]+" -");
+			
+			var name = markerDataList[i]["item_id"];
+			var address = markerDataList[i]["street"];
+			var type = markerDataList[i]["category"];
+			var id = markerDataList[i]["item_id"];
+			var gps_comps = markerDataList[i]["gps"].split(",");
+			var point = new google.maps.LatLng(
+					parseFloat( gps_comps[0] ),
+					parseFloat( gps_comps[1] )
+				);
+			var baseUrl = 'hand.se';
+			baseUrl = 'http://www.andra' + baseUrl;
+			var html = '<div class="map_tooltip"><b>' + type + '</b> ' + name + '<br/>';
+			var showImages = false;
+			if(markerDataList[i]["image"] && showImages) {
+				html += '<img class="preview_pic" src="'+baseUrl+markerDataList[i]["image"]+'" /><br/>';
+			}
+			html += '<span class="address">' +address + '</span><br/>' + ' <br/> Rent: <strong>'+markerDataList[i]["rent"] + '</strong> Size: '+markerDataList[i]["size"] + ' / ' + markerDataList[i]["rooms"] + ' <br/> Posted: ' + markerDataList[i]["datetime"] + '<br/> Duration: ' + duration_str + '<br/>';
+			var contact = markerDataList[i]["contact"];
+			if(contact != "") {
+				html += 'Contact: '+contact+'<br/>';
+			}
+			html += '<a href="' + baseUrl + markerDataList[i]["url"] + '" target="_new" >More Info</a>' ;
+			html += '<span class="adicon adtype_'+categoryImageMap[type]+'"></span>';
+			html += '</div>';
+			
+			//var icon = customIcons[type] || {};
+			var marker = new google.maps.Marker({
+					map : map,
+					position : point//,
+					//icon : icon.icon,
+					//shadow : icon.shadow,
+					//animation : google.maps.Animation.BOUNCE
+				});
+			mapMarkerList.push(marker);
 
-		bindInfoWindow(marker, map, infoWindow, html);
+			bindInfoWindow(marker, map, infoWindow, html);
+		}
+		$('#filterInfo').html("Showing " + mapMarkerList.length + " of " + markerDataList.length + ".");
 	}
 
 	function bindInfoWindow(marker, map, infoWindow, html) {

@@ -14,10 +14,10 @@
         <link rel="stylesheet" href="../css/main.css">
         <script src="../js/vendor/modernizr-2.8.3.min.js"></script>
         <style type="text/css">
-			/*html { height: auto; }*/
+			/* html { height: auto; } */
             body { font: 95.0% "Calabri", sans-serif; margin: 0px; background-color:#EEEEEE; }
-			#map_canvas { height: auto; position: absolute; bottom: 0; left: 0; right: 0; top: 0; }
-			/*@media print { #map_canvas { height: 950px; } }*/
+			#map_canvas { height: auto; position: absolute; bottom: 35px; left: 0; right: 0; top: 0; }
+			/*@media print { #map_canvas { height: 700px; } }*/
 			.preview_pic { width: 175px; }
 			.address { background-color:#DEDEDE; }
 			.adicon { position: absolute; right: 5px; bottom: 5px; width: 48px; height: 48px; }
@@ -27,6 +27,7 @@
 			.adtype_4 { background-image:url('img/ah_adtypes/adtype_4.png'); }
 			.adtype_5 { background-image:url('img/ah_adtypes/adtype_5.png'); }
 			.adtype_6 { background-image:url('img/ah_adtypes/adtype_6.png'); }
+			#filter_panel { height: 30px; position: absolute; bottom: 2px; left: 2px; right: 2px; }
         </style>
     </head>
     <body>
@@ -35,6 +36,12 @@
         <![endif]-->
 
         <div id="map_canvas"></div>
+		<div id="filter_panel">
+			<label for="i_monthsAhead">Min End (Months)</label> <input type="text" id="i_monthsAhead" name="i_monthsAhead" value="5" />
+			<label for="i_daysInPast">Max Post Age (Days)</label> <input type="text" id="i_daysInPast" name="i_daysInPast" value="45" />
+			<button id="filterBtn">Filter</button>
+			<span id="filterInfo"></span>
+		</div>
 
         <script>
 		if(window.location.origin.startsWith('file:') || window.location.protocol.startsWith('file:')) {
