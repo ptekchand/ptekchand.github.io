@@ -5,10 +5,26 @@ jQuery(document).ready(function() {
 	var aCentralLat = 59.312768;
 	var aCentralLon = 18.0735245;
 	
-	function filterMarkerData(markerData) {
-		var acceptDate = true;
-		var monthZeroIdx = 10; // 10 = November(11)
-		var minimumEndDate = new Date(2015, monthZeroIdx, 1);
+	function getFutureDateByMonths(monthsAhead = 5) {
+		var minimumEndDate = new Date();
+		var futureMonth = minimumEndDate.getMonth() + monthsAhead;
+		var futureYear = minimumEndDate.getYear();
+		while(futureMonth > 11) {
+			futureMonth -= 11;
+			futureYear += 1;
+		}
+		minimumEndDate = new Date(futureYear, futureMonth);
+		return minimumEndDate;
+	}
+	
+	function getPastDateByDays(daysInPast = 60) {
+		var daysToMsecFactor = 24*60*60*1000;
+		return new Date(new Date() - daysInPast*daysToMsecFactor);
+	}
+	
+	function filterMarkerData(markerData, minimumEndDate, oldestPostDate) {
+		var acceptData = true;
+		
 		var svenskaMonths = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
 		// "Idag (00:00) - Tills vidare."
 		// "Omg\u00e5ende - Tills vidare."
@@ -43,18 +59,28 @@ jQuery(document).ready(function() {
 			if(monthIdx >= 0) {
 				var durationDate = new Date(dtParts[3], monthIdx, dtParts[1]);
 				if(durationDate > minimumEndDate) {
-					acceptDate = true;
+					acceptData = true;
 				}
 				else {
-					acceptDate = false;
+					acceptData = false;
 				}
 			}
 		}
 		else {
-			console.log("DEBUG: Unknown duration: '"+durationText+"'");
+			//console.log("DEBUG: Unknown duration: '"+durationText+"'");
+		}
+		//--------------------------------------------------------------
+		// filter by age of data.
+		if(acceptData) {
+			var postDateStrParts = markerData["datetime"].split('-');
+			//assert(postDateStrParts.length==3);
+			var postDate = new Date(postDateStrParts[0], postDateStrParts[1]-1, postDateStrParts[2]);
+			if(postDate < oldestPostDate) {
+				acceptData = false;
+			}
 		}
 		
-		return acceptDate;
+		return acceptData;
 	}
 
 	//// Test filterMarkerData
@@ -71,10 +97,14 @@ jQuery(document).ready(function() {
 	});
 	var clickedInfo = false;
 	var infoWindow = new google.maps.InfoWindow;
+	var monthsAhead = 5;
+	var daysInPast = 60;
+	var minimumEndDate = getFutureDateByMonths(monthsAhead);
+	var oldestPostDate = getPastDateByDays(daysInPast);
 	var markers = ResponseJSON;
 	var svTodayRe = /Idag \(\d+:\d+\)/;
 	for (var i = 0; i < markers.length; i++) {
-		if(!filterMarkerData(markers[i])) {
+		if(!filterMarkerData(markers[i], minimumEndDate, oldestPostDate)) {
 			continue;
 		}
 		var duration_str = markers[i]["duration"];
