@@ -22,6 +22,10 @@ jQuery(document).ready(function() {
 		return new Date(new Date() - daysInPast*daysToMsecFactor);
 	}
 	
+	// To set colors
+	var L1DaysAgo = getPastDateByDays(5);
+	var L2DaysAgo = getPastDateByDays(21);
+	
 	function filterMarkerData(markerData, minimumEndDate, oldestPostDate) {
 		var acceptData = true;
 		
@@ -81,6 +85,14 @@ jQuery(document).ready(function() {
 			var postDateStrParts = markerData["datetime"].split('-');
 			//assert(postDateStrParts.length==3);
 			var postDate = new Date(postDateStrParts[0], postDateStrParts[1]-1, postDateStrParts[2]);
+			//markerData["postDate"] = postDate;
+			markerData["iconColor"] = "red";
+			if(postDate>L1DaysAgo) {
+				markerData["iconColor"] = "green";
+			} else if(postDate>L2DaysAgo) {
+				markerData["iconColor"] = "yellow";
+			}
+			// Check the start date as well for ads that are posted well in advance.
 			if(postDate < oldestPostDate) {
 				acceptData = false;
 			}
@@ -128,6 +140,26 @@ jQuery(document).ready(function() {
 	
 	setAndDrawMarkers();
 	
+	function getStandardMarkerIcon(color) {
+		var markerColors = {
+			"red": "FE7569", // Default
+			"blue": "6991fd",
+			"purple": "8e67fd",
+			"yellow": "fdf569",
+			"green": "00e64d"
+		};
+		var pinColor = markerColors[color];
+		var pinImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + pinColor,
+			new google.maps.Size(21, 34),
+			new google.maps.Point(0,0),
+			new google.maps.Point(10, 34));
+		//var pinShadow = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_shadow",
+		//	new google.maps.Size(40, 37),
+		//	new google.maps.Point(0, 0),
+		//	new google.maps.Point(12, 35));
+		return pinImage;
+	}
+	
 	function setAndDrawMarkers() {
 		var minimumEndDate = getFutureDateByMonths(monthsAhead);
 		var oldestPostDate = getPastDateByDays(daysInPast);
@@ -136,43 +168,46 @@ jQuery(document).ready(function() {
 		var markerDataList = ResponseJSON;
 		var svTodayRe = /Idag \(\d+:\d+\)/;
 		for (var i = 0; i < markerDataList.length; i++) {
-			if(!filterMarkerData(markerDataList[i], minimumEndDate, oldestPostDate)) {
+			var markerData = markerDataList[i];
+			if(!filterMarkerData(markerData, minimumEndDate, oldestPostDate)) {
 				continue;
 			}
-			var duration_str = markerDataList[i]["duration"];
-			duration_str = duration_str.replace( svTodayRe, markerDataList[i]["datetime"] );
-			//duration_str = duration_str.replace("Omg\u00e5ende -", markerDataList[i]["datetime"]+" -");
+			var duration_str = markerData["duration"];
+			duration_str = duration_str.replace( svTodayRe, markerData["datetime"] );
+			//duration_str = duration_str.replace("Omg\u00e5ende -", markerData["datetime"]+" -");
 			
-			var name = markerDataList[i]["item_id"];
-			var address = markerDataList[i]["street"];
-			var type = markerDataList[i]["category"];
-			var id = markerDataList[i]["item_id"];
-			var gps_comps = markerDataList[i]["gps"].split(",");
+			var name = markerData["item_id"];
+			var address = markerData["street"];
+			var type = markerData["category"];
+			var id = markerData["item_id"];
+			var gps_comps = markerData["gps"].split(",");
 			var point = new google.maps.LatLng(
 					parseFloat( gps_comps[0] ),
 					parseFloat( gps_comps[1] )
 				);
 			var baseUrl = 'hand.se';
 			baseUrl = 'http://www.andra' + baseUrl;
-			var html = '<div class="map_tooltip"><b>' + type + '</b> ' + name + '<br/>';
+			var html = '<div class="map_tooltip"><b>' + type + '</b> ' + name;
+			html += (markerData["furnished"])? " [F]": " [UF]";
+			html += '<br/>';
 			var showImages = false;
-			if(markerDataList[i]["image"] && showImages) {
-				html += '<img class="preview_pic" src="'+baseUrl+markerDataList[i]["image"]+'" /><br/>';
+			if(markerData["image"] && showImages) {
+				html += '<img class="preview_pic" src="'+baseUrl+markerData["image"]+'" /><br/>';
 			}
-			html += '<span class="address">' +address + '</span><br/>' + ' <br/> Rent: <strong>'+markerDataList[i]["rent"] + '</strong> Size: '+markerDataList[i]["size"] + ' / ' + markerDataList[i]["rooms"] + ' <br/> Posted: ' + markerDataList[i]["datetime"] + '<br/> Duration: ' + duration_str + '<br/>';
-			var contact = markerDataList[i]["contact"];
+			html += '<span class="address">' +address + '</span><br/>' + ' <br/> Rent: <strong>'+markerData["rent"] + '</strong> Size: '+markerData["size"] + ' / ' + markerData["rooms"] + ' <br/> Posted: ' + markerData["datetime"] + '<br/> Duration: ' + duration_str + '<br/>';
+			var contact = markerData["contact"];
 			if(contact != "") {
 				html += 'Contact: '+contact+'<br/>';
 			}
-			html += '<a href="' + baseUrl + markerDataList[i]["url"] + '" target="_new" >More Info</a>' ;
+			html += '<a href="' + baseUrl + markerData["url"] + '" target="_new" >More Info</a>' ;
 			html += '<span class="adicon adtype_'+categoryImageMap[type]+'"></span>';
 			html += '</div>';
 			
 			//var icon = customIcons[type] || {};
 			var marker = new google.maps.Marker({
 					map : map,
-					position : point//,
-					//icon : icon.icon,
+					position : point,
+					icon : getStandardMarkerIcon( markerData["iconColor"] ),
 					//shadow : icon.shadow,
 					//animation : google.maps.Animation.BOUNCE
 				});
