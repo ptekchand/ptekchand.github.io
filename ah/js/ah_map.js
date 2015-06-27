@@ -26,6 +26,7 @@ jQuery(document).ready(function() {
 	var L1DaysAgo = getPastDateByDays(5);
 	var L2DaysAgo = getPastDateByDays(21);
 	var L3DaysAhead = getPastDateByDays(-35);
+	var exactDate = new Date(2015, 7, 1); // Make this an input parameter
 	
 	function getDateForSvString(durationPart) {
 		var svenskaMonths = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
@@ -75,6 +76,9 @@ jQuery(document).ready(function() {
 		if(durationParts.length != 2) {
 			console.log("DEBUG: Duration string doesn't have a hyphen as expected? ("+durationText+")");
 		}
+		//if(markerData["item_id"]=="22372") {
+		//	console.log("Breakpoint!");
+		//}
 		var durationEndDate = getDateForSvString(durationParts[1].trim());
 		var durationStartDate = getDateForSvString(durationParts[0].trim());
 		
@@ -108,6 +112,9 @@ jQuery(document).ready(function() {
 			}
 			else if(durationStartDate > L3DaysAhead) {
 				markerData["iconColor"] = "yellow";
+			}
+			else if(durationStartDate.getTime() == exactDate.getTime()) {
+				markerData["iconColor"] = "blue";
 			}
 		}
 		
