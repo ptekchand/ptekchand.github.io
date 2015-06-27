@@ -25,32 +25,20 @@ jQuery(document).ready(function() {
 	// To set colors
 	var L1DaysAgo = getPastDateByDays(5);
 	var L2DaysAgo = getPastDateByDays(21);
+	var L3DaysAhead = getPastDateByDays(-35);
 	
-	function filterMarkerData(markerData, minimumEndDate, oldestPostDate) {
-		var acceptData = true;
-		
+	function getDateForSvString(durationPart) {
 		var svenskaMonths = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
 		// "Idag (00:00) - Tills vidare."
 		// "Omg\u00e5ende - Tills vidare."
 		// "01 augusti 2015 - 01 september 2016"
 		// "01 augusti 2015 - Tills vidare."
-		var durationText = markerData["duration"].trim();
-		//var durationRe = /[0-9a-z ]+ - ([0-9a-z ]+)/;
-		//var durationParts = durationText.match( durationRe ); // Index 0 is the full match. Index 1 onwards are the capturing parenthesis.
-		var durationParts = durationText.split('-');
-		var durationTo = "";
+		durationPart = durationPart.trim();
 		var dtParts = []
 		var aDateRe = /([0-9]+) ([a-z]+) ([0-9]+)/;
-		if(durationParts.length == 2) {
-			durationTo = durationParts[1].trim()
-			// Index 0 is the full match. Index 1 onwards are the capturing parenthesis.
-			dtParts = durationTo.match( aDateRe );
-		}
-		else if(durationParts.length == 1) {
-			durationTo = durationParts[0].trim()
-			dtParts = durationTo.match( aDateRe );
-		}
-		
+		// Index 0 is the full match. Index 1 onwards are the capturing parenthesis.
+		dtParts = durationPart.match( aDateRe );
+		var durationDate = new Date();
 		// 3 capturing parentheses plus 1 full match
 		if(dtParts != null && dtParts.length == 4) {
 			var monthIdx = -1; // 0 
@@ -61,40 +49,65 @@ jQuery(document).ready(function() {
 				}
 			}
 			if(monthIdx >= 0) {
-				var durationDate = new Date(dtParts[3], monthIdx, dtParts[1]);
-				if(durationDate > minimumEndDate) {
-					acceptData = true;
-				}
-				else {
-					acceptData = false;
-				}
+				durationDate = new Date(dtParts[3], monthIdx, dtParts[1]);
 			}
 		}
 		else {
 			var showUnknownDuration = true;
-			if(durationParts.length==2 && durationParts[1].trim()=="Tills vidare.") {
+			if(durationPart=="Tills vidare.") {
+				showUnknownDuration = false;
+				durationDate = false
+			}
+			else if (durationPart=="Omg\u00e5ende" || durationPart.startsWith('Idag')) {
 				showUnknownDuration = false;
 			}
 			if(showUnknownDuration) {
 				console.log("DEBUG: Unknown duration: '"+durationText+"'");
 			}
 		}
+		return durationDate;
+	}
+	
+	function filterMarkerData(markerData, minimumEndDate, oldestPostDate) {
+		var acceptData = true;
+		var durationText = markerData["duration"].trim();
+		var durationParts = durationText.split('-');
+		if(durationParts.length != 2) {
+			console.log("DEBUG: Duration string doesn't have a hyphen as expected? ("+durationText+")");
+		}
+		var durationEndDate = getDateForSvString(durationParts[1].trim());
+		var durationStartDate = getDateForSvString(durationParts[0].trim());
+		
+		//--------------------------------------------------------------
+		// filter by last date of availability.
+		if(durationEndDate===false || durationEndDate > minimumEndDate) {
+			acceptData = true;
+		}
+		else {
+			acceptData = false;
+		}
+		
 		//--------------------------------------------------------------
 		// filter by age of data.
 		if(acceptData) {
 			var postDateStrParts = markerData["datetime"].split('-');
 			//assert(postDateStrParts.length==3);
 			var postDate = new Date(postDateStrParts[0], postDateStrParts[1]-1, postDateStrParts[2]);
+			// Check the start date as well for ads that are posted well in advance.
+			if(postDate < oldestPostDate) {
+				acceptData = false;
+			}
+
 			//markerData["postDate"] = postDate;
 			markerData["iconColor"] = "red";
 			if(postDate>L1DaysAgo) {
 				markerData["iconColor"] = "green";
-			} else if(postDate>L2DaysAgo) {
+			}
+			else if(postDate>L2DaysAgo) {
 				markerData["iconColor"] = "yellow";
 			}
-			// Check the start date as well for ads that are posted well in advance.
-			if(postDate < oldestPostDate) {
-				acceptData = false;
+			else if(durationStartDate > L3DaysAhead) {
+				markerData["iconColor"] = "yellow";
 			}
 		}
 		
@@ -163,8 +176,8 @@ jQuery(document).ready(function() {
 	function setAndDrawMarkers() {
 		var minimumEndDate = getFutureDateByMonths(monthsAhead);
 		var oldestPostDate = getPastDateByDays(daysInPast);
-		console.log("DEBUG: minimumEndDate: '"+minimumEndDate+"'");
-		console.log("DEBUG: oldestPostDate: '"+oldestPostDate+"'");
+		//console.log("DEBUG: minimumEndDate: '"+minimumEndDate+"'");
+		//console.log("DEBUG: oldestPostDate: '"+oldestPostDate+"'");
 		var markerDataList = ResponseJSON;
 		var svTodayRe = /Idag \(\d+:\d+\)/;
 		for (var i = 0; i < markerDataList.length; i++) {
