@@ -28,8 +28,28 @@ jQuery(document).ready(function() {
 	var L3DaysAhead = getPastDateByDays(-35);
 	var exactDate = new Date(2015, 7, 1); // Make this an input parameter
 	
+	// Helper to handle Swedish/English dates.
+	// Returns Date or -1. Requires StringArray[12], StringArray[4]
+	function getDateObjectFrom(languageMonths, dtParts) {
+		if(dtParts != null && dtParts.length == 4) {
+			var monthIdx = -1; // 0 
+			for(var idx=0; idx<languageMonths.length; idx+=1 ) {
+				if(languageMonths[idx] == dtParts[2]) {
+					monthIdx = idx;
+					break;
+				}
+			}
+			if(monthIdx >= 0) {
+				durationDate = new Date(dtParts[3], monthIdx, dtParts[1]);
+				return durationDate;
+			}
+		}
+		return -1;
+	}
+	
 	function getDateForSvString(durationPart) {
 		var svenskaMonths = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
+		var enMonths = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 		// "Idag (00:00) - Tills vidare."
 		// "Omg\u00e5ende - Tills vidare."
 		// "01 augusti 2015 - 01 september 2016"
@@ -43,15 +63,10 @@ jQuery(document).ready(function() {
 		var durationDate = new Date();
 		// 3 capturing parentheses plus 1 full match
 		if(dtParts != null && dtParts.length == 4) {
-			var monthIdx = -1; // 0 
-			for(var idx=0; idx<svenskaMonths.length; idx+=1 ) {
-				if(svenskaMonths[idx] == dtParts[2]) {
-					monthIdx = idx;
-					break;
-				}
-			}
-			if(monthIdx >= 0) {
-				durationDate = new Date(dtParts[3], monthIdx, dtParts[1]);
+			durationDate = getDateObjectFrom(svenskaMonths, dtParts);
+			if(durationDate == -1) {
+				durationDate = getDateObjectFrom(enMonths, dtParts);
+				//console.log("This date may have English in it: " + dtParts[2]);
 			}
 		}
 		else {
