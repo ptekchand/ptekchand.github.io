@@ -35,6 +35,7 @@ jQuery(document).ready(function() {
 		// "01 augusti 2015 - 01 september 2016"
 		// "01 augusti 2015 - Tills vidare."
 		durationPart = durationPart.trim();
+		durationPart = durationPart.toLowerCase();
 		var dtParts = []
 		var aDateRe = /([0-9]+) ([a-z]+) ([0-9]+)/;
 		// Index 0 is the full match. Index 1 onwards are the capturing parenthesis.
@@ -55,15 +56,15 @@ jQuery(document).ready(function() {
 		}
 		else {
 			var showUnknownDuration = true;
-			if(durationPart=="Tills vidare.") {
+			if(durationPart=="tills vidare.") {
 				showUnknownDuration = false;
 				durationDate = false
 			}
-			else if (durationPart=="Omg\u00e5ende" || durationPart.startsWith('Idag')) {
+			else if (durationPart=="omg\u00e5ende" || durationPart.startsWith('idag')) {
 				showUnknownDuration = false;
 			}
 			if(showUnknownDuration) {
-				console.log("DEBUG: Unknown duration: '"+durationText+"'");
+				console.log("DEBUG: Unknown duration: '"+durationPart+"'");
 			}
 		}
 		return durationDate;
