@@ -98,7 +98,7 @@ jQuery(document).ready(function() {
 			//assert(postDateStrParts.length==3);
 			var postDate = new Date(postDateStrParts[0], postDateStrParts[1]-1, postDateStrParts[2]);
 			// Check the start date as well for ads that are posted well in advance.
-			if(postDate < oldestPostDate) {
+			if(postDate < oldestPostDate && !(durationStartDate > L3DaysAhead)) {
 				acceptData = false;
 			}
 
